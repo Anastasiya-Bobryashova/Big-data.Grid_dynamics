@@ -40,27 +40,26 @@ Base = declarative_base()
 class Table(Base):
     __tablename__ = 'Top'
     id = Column(Integer, primary_key = True, nullable = False) 
-    topd = Column(Integer)
     org_name = Column(Text)
     repo_name = Column(Text)
     stars_count = Column(Integer)
 
+data = Fetch()
+organizations = data.get_organizations()
+repos = data.get_repositories(organizations)
+top_rep = data.top_repositories(repos)
+
 with open('Top_repositories.csv', 'w', newline = '') as Top:
     writer = csv.writer(Top)
     writer.writerow(['Organization name', 'Repository name', 'Number of stars'])
-    for line in topic:
+    for line in top_rep:
         writer.writerow(line)
     print("Writing complete")
 
 engine = create_engine('sqlite:///cdb.db')
 Base.metadata.create_all(engine)
-file_name = 'Top_repositories.csv'
-SQL_table = pd.read_csv(file_name)
+file = 'Top_repositories.csv'
+SQL_table = pd.read_csv(file)
 SQL_table.to_sql(con = engine, index_label = 'id', name = Table.__tablename__, if_exists = 'replace')
-
-data = Fetch()
-organizations = data.get_organizations()
-repos = data.get_repositories(organizations)
-topic = data.top_repositories(repos)
 
 print(SQL_table)
