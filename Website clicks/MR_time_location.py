@@ -31,7 +31,7 @@ class MR_time_location(MRJob):
             ),
             MRStep(
                 mapper = self.mapper_hour_with_location_and_clicks,
-                reducer = self.mapper_hour_with_location_and_clicks
+                reducer = self.reducer_hour_with_location_and_clicks
             ),
             MRStep(
                 mapper = self.mapper_result,
@@ -44,12 +44,12 @@ class MR_time_location(MRJob):
         time = search(r'(\d{1,3}\:)', line).group(1)
         hour = int(time[:2])
         if 8 <= hour <= 18:
-            yield (hour, IP), 1
+            yield (IP, hour), 1
             
     def mapper_hour_with_location(self, IP_and_hour, count):
         IP, hour = IP_and_hour
         location = get_location_by_IP(IP)
-        yield (hour, location), count    
+        yield (location, hour), count    
         
     def reducer(self, key, values):
         yield key, sum(values)
@@ -58,7 +58,7 @@ class MR_time_location(MRJob):
         location, hour = location_and_hour
         yield hour, {location: count}
 
-    def mapper_hour_with_location_and_clicks(self, hour, location_and_clicks):
+    def reducer_hour_with_location_and_clicks(self, hour, location_and_clicks):
         yield hour, list(location_and_clicks)
 
     def mapper_result(self, hour, location_and_clicks):
