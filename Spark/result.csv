@@ -1,9 +1,0 @@
-time,number_of_purchases,location_and_number_of_visits
-09:00,4,"{'Australia':5,'United States':6,'Macedonia':2}"
-10:00,2,"{'United States':11,'Peru':1,'Belgium':3}"
-11:00,4,"{'China':4,'Turkey':10,'Thailand':3}"
-12:00,3,"{'Japan':11,'China':2,'Sweden':1}"
-13:00,7,"{'Macedonia':9,'United States':5,'Belgium':5]"
-14:00,6,"{'Albania':8,'Japan':3,'United States':12}"
-15:00,7,"{'China':9,'Hungary':2,'Belarus':11}"
-16:00,7,"{'Bolivia':10,'Japan':3,'United States':12}"
