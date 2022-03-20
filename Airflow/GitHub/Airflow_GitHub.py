@@ -7,7 +7,7 @@ from airflow import DAG
 import requests
 import json
 
-token = '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'
+token = ''
 headers = {'Accept': 'application/vnd.github+json', 'authorization': f'Bearer {token}'}
 max_id = 0
 
@@ -15,7 +15,6 @@ max_id = 0
 def get_organizations():
     list_of_organizations = []
     url = 'https://api.github.com/organizations?per_page=100'
-
     for _ in range(2):
         global max_id
         parameter = {'since': max_id}
@@ -47,13 +46,20 @@ def get_top_repositories(repositories):
 
 def insert_top_repositories_in_table(top_repositories):
     top_repositories = json.loads(top_repositories)
-    hook = SqliteHook()
-
+    hook = SqliteHook(sqlite_conn_id = 'Top_20_repositories_by_number_of_stars')
+    sql = 'INSERT INTO Top_repositories (Organization, Repository, Number_of_stars) VALUES (?, ?, ?)'
     for repository in top_repositories:
         parameters = [repository[0], repository[1], repository[2]]
-        hook.run("""
-        INSERT INTO Top_repositories (Organization, Repository, Number_of_stars) VALUES (?, ?, ?)
-        """, parameters = parameters)
+        hook.run(sql, parameters = parameters, autocommit = True)
+
+
+def show_top_repositories():
+    hook = SqliteHook(sqlite_conn_id = 'Top_20_repositories_by_number_of_stars')
+    sql = 'SELECT * FROM Top_repositories'
+    conn = hook.get_conn()
+    cur = conn.cursor()
+    result = cur.execute(sql).fetchall()
+    return result
 
 
 with DAG(
@@ -76,32 +82,40 @@ with DAG(
     fetch_top_repos = PythonOperator(
         task_id = 'fetch_top_repositories',
         python_callable = get_top_repositories,
-        op_kwargs = {'repositories': "{{task_instance.xcom_pull(task_ids='fetch_repositories')}}"}
+        op_kwargs = {'repositories': "{{task_instance.xcom_pull(task_ids = 'fetch_repositories')}}"}
     )
 
     create_table = SqliteOperator(
         task_id = 'create_table',
+        sqlite_conn_id = 'Top_20_repositories_by_number_of_stars',
         sql = """
         CREATE TABLE Top_repositories (
             Organization TEXT,
             Repository TEXT,
-            Number_of_stars TEXT
+            Number_of_stars INT
         );
         """
     )
 
-    insert_data_in_table = PythonOperator(
-        task_id = 'insert_data_in_table',
+    insert_top_repos_in_table = PythonOperator(
+        task_id = 'insert_top_repos_in_table',
         python_callable = insert_top_repositories_in_table,
-        op_kwargs = {'top_repositories': "{{task_instance.xcom_pull(task_ids='fetch_top_repositories')}}"}
+        op_kwargs = {'top_repositories': "{{task_instance.xcom_pull(task_ids = 'fetch_top_repositories')}}"}
+    )
+
+    show_table = PythonOperator(
+        task_id = 'show_top_repositories',
+        python_callable = show_top_repositories,
     )
 
     drop_table = SqliteOperator(
         task_id = 'drop_table',
+        sqlite_conn_id = 'Top_20_repositories_by_number_of_stars',
         sql = """
             DROP TABLE IF EXISTS Top_repositories;
             """
     )
 
+
 drop_table >> create_table
-fetch_orgs >> fetch_repos >> fetch_top_repos >> insert_data_in_table
+fetch_orgs >> fetch_repos >> fetch_top_repos >> insert_top_repos_in_table >> show_table
